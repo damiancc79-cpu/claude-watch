@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Calibre S-1 — Skeleton Watch</title>
+<style>
+  :root {
+    --ink: #e9ecf1;
+    --dim: #8a94a3;
+    --gold: #c9a55c;
+    --line: rgba(255,255,255,.10);
+    --panel: rgba(14,17,22,.72);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #04060a; }
+  body {
+    font: 400 13px/1.45 "Helvetica Neue", Inter, system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  canvas { display: block; }
+  #app { position: fixed; inset: 0; }
+
+  /* ---------------------------------------------------------- chrome */
+  .masthead {
+    position: fixed; left: 26px; top: 22px; pointer-events: none; z-index: 5;
+    text-shadow: 0 1px 14px rgba(0,0,0,.85);
+  }
+  .masthead h1 {
+    margin: 0; font: 400 25px/1.1 "Times New Roman", Georgia, serif;
+    letter-spacing: .16em; text-transform: uppercase;
+  }
+  .masthead h1 em { font-style: normal; color: var(--gold); }
+  .masthead p {
+    margin: 7px 0 0; font-size: 10.5px; letter-spacing: .34em;
+    text-transform: uppercase; color: var(--dim);
+  }
+
+  .readout {
+    position: fixed; right: 26px; top: 22px; z-index: 5; text-align: right;
+    pointer-events: none; text-shadow: 0 1px 14px rgba(0,0,0,.85);
+  }
+  .readout .t {
+    font: 300 34px/1 "Helvetica Neue", system-ui, sans-serif;
+    letter-spacing: .06em; font-variant-numeric: tabular-nums;
+  }
+  .readout .t small { font-size: 17px; color: var(--gold); margin-left: 2px; }
+  .readout .sub {
+    margin-top: 6px; font-size: 10px; letter-spacing: .26em;
+    text-transform: uppercase; color: var(--dim);
+  }
+
+  .panel {
+    position: fixed; left: 22px; bottom: 22px; z-index: 6;
+    width: 246px; padding: 16px 16px 14px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    box-shadow: 0 18px 50px rgba(0,0,0,.55);
+  }
+  .panel h2 {
+    margin: 0 0 9px; font: 500 9.5px/1 sans-serif; letter-spacing: .26em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .panel h2:not(:first-child) { margin-top: 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .grid.three { grid-template-columns: repeat(3, 1fr); }
+  button {
+    font: 500 11px/1 inherit; color: var(--ink); letter-spacing: .04em;
+    padding: 8px 6px; border-radius: 7px; cursor: pointer;
+    background: rgba(255,255,255,.045);
+    border: 1px solid var(--line);
+    transition: background .16s, border-color .16s, color .16s;
+  }
+  button:hover { background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22); }
+  button.on {
+    background: rgba(201,165,92,.17); border-color: rgba(201,165,92,.55); color: #f0dcae;
+  }
+  .row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .row label { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); flex: 0 0 62px; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; flex: 1; height: 3px; border-radius: 2px;
+    background: rgba(255,255,255,.16); outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+    background: var(--gold); cursor: pointer; box-shadow: 0 0 0 3px rgba(201,165,92,.18);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 13px; height: 13px; border: 0; border-radius: 50%; background: var(--gold); cursor: pointer;
+  }
+
+  .hint {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase;
+    color: rgba(255,255,255,.30); z-index: 4; pointer-events: none; white-space: nowrap;
+  }
+
+  /* --------------------------------------------------------- labels */
+  .labels { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: none; }
+  .leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .leader { fill: none; stroke: rgba(201,165,92,.55); stroke-width: 1; }
+  .label {
+    position: absolute; top: 0; left: 0; white-space: nowrap;
+    font: 500 10px/1 sans-serif; letter-spacing: .13em; text-transform: uppercase;
+    color: #f2e5c8; padding: 5px 8px; border-radius: 5px;
+    background: rgba(10,13,18,.82); border: 1px solid rgba(201,165,92,.35);
+    transition: opacity .2s;
+  }
+
+  /* --------------------------------------------------------- loading */
+  #boot {
+    position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+    background: #04060a; transition: opacity .7s ease;
+  }
+  #boot .in { text-align: center; }
+  #boot .ring {
+    width: 34px; height: 34px; margin: 0 auto 16px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.14); border-top-color: var(--gold);
+    animation: spin 1.05s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #boot p { margin: 0; font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--dim); }
+  #boot.err .ring { display: none; }
+  #boot.err p { color: #e58989; letter-spacing: .06em; text-transform: none; font-size: 12px; max-width: 60ch; }
+
+  @media (max-width: 720px) {
+    .panel { width: calc(100% - 28px); left: 14px; bottom: 14px; }
+    .masthead h1 { font-size: 19px; }
+    .readout .t { font-size: 25px; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="masthead">
+  <h1>Calibre <em>S&#8209;1</em></h1>
+  <p>Skeletonised · 17 jewels · 21 600 A/h</p>
+</div>
+
+<div class="readout">
+  <div class="t" id="clock">10:09<small>:32</small></div>
+  <div class="sub" id="rate">running · 1&times;</div>
+</div>
+
+<div class="panel">
+  <h2>View</h2>
+  <div class="grid three">
+    <button data-view="hero" class="on">Hero</button>
+    <button data-view="dial">Dial</button>
+    <button data-view="profile">Profile</button>
+    <button data-view="movement">Movement</button>
+    <button data-view="escapement">Escape</button>
+    <button data-view="barrel">Barrel</button>
+  </div>
+
+  <h2>Time</h2>
+  <div class="grid three">
+    <button data-speed="0">Pause</button>
+    <button data-speed="0.1">1/10&times;</button>
+    <button data-speed="1" class="on">1&times;</button>
+    <button data-speed="60">60&times;</button>
+    <button data-speed="3600">1 h/s</button>
+    <button id="rewind">Reset</button>
+  </div>
+
+  <h2>Show</h2>
+  <div class="grid">
+    <button data-toggle="case" class="on">Case</button>
+    <button data-toggle="crystal" class="on">Crystal</button>
+    <button data-toggle="dial" class="on">Dial &amp; hands</button>
+    <button data-toggle="bridges" class="on">Bridges</button>
+    <button data-toggle="strap" class="on">Strap</button>
+    <button data-toggle="labels">Labels</button>
+  </div>
+
+  <div class="row">
+    <label for="explode">Exploded</label>
+    <input id="explode" type="range" min="0" max="100" value="0">
+  </div>
+  <div class="row">
+    <label for="spin">Turntable</label>
+    <input id="spin" type="range" min="0" max="100" value="0">
+  </div>
+</div>
+
+<div class="hint">Drag to orbit &nbsp;·&nbsp; scroll to zoom &nbsp;·&nbsp; 1/10&times; is the one for watching the escapement</div>
+
+<div id="boot"><div class="in"><div class="ring"></div><p>Assembling movement</p></div></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+  const boot = document.getElementById('boot');
+  const fail = (msg) => {
+    boot.className = 'err';
+    boot.querySelector('p').textContent = msg;
+  };
+  window.addEventListener('error', (e) => fail(e.message || String(e.error)));
+  window.addEventListener('unhandledrejection', (e) => fail(String(e.reason && e.reason.message || e.reason)));
+  import('./src/main.js').then((m) => m.start()).catch((e) => fail(e.message || String(e)));
+</script>
+</body>
+</html>
